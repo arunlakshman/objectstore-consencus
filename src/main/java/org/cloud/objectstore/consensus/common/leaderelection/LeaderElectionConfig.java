@@ -1,8 +1,8 @@
-package org.cloud.objectstore.consensus.s3.leaderelection;
+package org.cloud.objectstore.consensus.common.leaderelection;
 
 import lombok.Builder;
 import lombok.Getter;
-import org.cloud.objectstore.consensus.lock.Lock;
+import org.cloud.objectstore.consensus.api.Lock;
 
 import java.time.Duration;
 

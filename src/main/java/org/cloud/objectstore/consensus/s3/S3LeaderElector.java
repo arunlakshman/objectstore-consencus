@@ -1,7 +1,7 @@
 package org.cloud.objectstore.consensus.s3;
 
-import org.cloud.objectstore.consensus.s3.leaderelection.LeaderElectionConfig;
-import org.cloud.objectstore.consensus.s3.leaderelection.LeaderElectionRecord;
+import org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionConfig;
+import org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
-import static org.cloud.objectstore.consensus.s3.utils.Utils.scheduleWithVariableRate;
+import static org.cloud.objectstore.consensus.common.utils.Utils.scheduleWithVariableRate;
 
 public class S3LeaderElector {
 

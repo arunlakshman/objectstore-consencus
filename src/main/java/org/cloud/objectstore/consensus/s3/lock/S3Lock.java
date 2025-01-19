@@ -1,8 +1,8 @@
 package org.cloud.objectstore.consensus.s3.lock;
 
 import lombok.RequiredArgsConstructor;
-import org.cloud.objectstore.consensus.lock.Lock;
-import org.cloud.objectstore.consensus.s3.leaderelection.LeaderElectionRecord;
+import org.cloud.objectstore.consensus.api.Lock;
+import org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionRecord;
 import software.amazon.awssdk.services.s3.S3Client;
 
 @RequiredArgsConstructor

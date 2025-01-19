@@ -1,4 +1,6 @@
-package org.cloud.objectstore.consensus.s3.utils;
+package org.cloud.objectstore.consensus.common;
+
+import org.cloud.objectstore.consensus.common.utils.Utils;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;

@@ -1,4 +1,6 @@
-package org.cloud.objectstore.consensus.s3.utils;
+package org.cloud.objectstore.consensus.common.utils;
+
+import org.cloud.objectstore.consensus.common.CachedSingleThreadScheduler;
 
 import java.util.Optional;
 import java.util.concurrent.*;

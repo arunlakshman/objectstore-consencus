@@ -1,6 +1,6 @@
-package org.cloud.objectstore.consensus.lock;
+package org.cloud.objectstore.consensus.api;
 
-import org.cloud.objectstore.consensus.s3.leaderelection.LeaderElectionRecord;
+import org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionRecord;
 
 /**
  * Lock interface for leader election on top of an object storage system like S3
