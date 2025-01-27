@@ -1,49 +1,30 @@
 package org.cloud.objectstore.consensus.common.utils;
 
-import org.cloud.objectstore.consensus.common.CachedSingleThreadScheduler;
-
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-public final class Utils {
+public final class SchedulerUtils {
 
-
-    /**
-     * Create a {@link ThreadFactory} with daemon threads and a thread
-     * name based upon the object passed in.
-     */
-    public static ThreadFactory daemonThreadFactory(Object forObject) {
-        String name = forObject.getClass().getSimpleName() + "-" + System.identityHashCode(forObject);
-        return daemonThreadFactory(name);
-    }
-
-    public static ThreadFactory daemonThreadFactory(String name) {
-        return new ThreadFactory() {
-            final ThreadFactory threadFactory = Executors.defaultThreadFactory();
-
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread ret = threadFactory.newThread(r);
-                ret.setName(name + "-" + ret.getName());
-                ret.setDaemon(true);
-                return ret;
-            }
-        };
-    }
 
     private static final CachedSingleThreadScheduler SHARED_SCHEDULER = new CachedSingleThreadScheduler();
 
     /**
      * Schedule a repeated task to run in the given {@link Executor} - which should run the task in a different thread as to not
      * hold the scheduling thread.
-     * <p>
      *
-     * @param nextDelay provides the relative next delay - that is the values are applied cumulatively to the initial start
-     *                  time. Supplying a fixed value produces a fixed rate.
+     * @param completion   the CompletableFuture to complete when the task is done
+     * @param executor     the executor to run the task
+     * @param command      the task to run
+     * @param initialDelay the initial delay before the task is run
+     * @param nextDelay    a supplier that provides the delay before the next execution
+     * @param unit         the time unit of the delays
      */
     public static void scheduleWithVariableRate(CompletableFuture<?> completion, Executor executor, Runnable command,
                                                 long initialDelay,
@@ -56,6 +37,17 @@ public final class Utils {
         completion.whenComplete((v, t) -> Optional.ofNullable(currentScheduledFuture.get()).ifPresent(s -> s.cancel(true)));
     }
 
+    /**
+     * Helper method to schedule a task with a variable rate.
+     *
+     * @param runner                 the task to run
+     * @param delay                  the delay before the task is run
+     * @param unit                   the time unit of the delay
+     * @param completion             the CompletableFuture to complete when the task is done
+     * @param nextDelay              a supplier that provides the delay before the next execution
+     * @param next                   the next execution time
+     * @param currentScheduledFuture the current scheduled future
+     */
     private static void schedule(Supplier<CompletableFuture<?>> runner, long delay, TimeUnit unit,
                                  CompletableFuture<?> completion, LongSupplier nextDelay, AtomicLong next,
                                  AtomicReference<ScheduledFuture<?>> currentScheduledFuture) {
@@ -73,27 +65,6 @@ public final class Utils {
                 }
             });
         }, delay, unit));
-    }
-
-    /**
-     * Schedule a task to run in the given {@link Executor} - which should run the task in a different thread as to not
-     * hold the scheduling thread
-     */
-    public static CompletableFuture<Void> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
-        // to be replaced in java 9+ with CompletableFuture.runAsync(command, CompletableFuture.delayedExecutor(delay, unit, executor));
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        ScheduledFuture<?> scheduledFuture = SHARED_SCHEDULER.schedule(() -> {
-            try {
-                executor.execute(command);
-                result.complete(null);
-            } catch (Throwable t) {
-                result.completeExceptionally(t);
-            }
-        }, delay, unit);
-        result.whenComplete((v, t) -> {
-            scheduledFuture.cancel(true);
-        });
-        return result;
     }
 
 }

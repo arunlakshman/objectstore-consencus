@@ -1,4 +1,4 @@
-package org.cloud.objectstore.consensus.common.leaderelection;
+package org.cloud.objectstore.consensus.api;
 
 import java.util.Objects;
 import java.util.function.Consumer;

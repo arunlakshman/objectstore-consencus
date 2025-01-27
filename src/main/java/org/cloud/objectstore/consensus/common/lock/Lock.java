@@ -1,34 +1,38 @@
-package org.cloud.objectstore.consensus.api;
+package org.cloud.objectstore.consensus.common.lock;
 
 import org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionRecord;
+import org.cloud.objectstore.consensus.exceptions.LeaderConflictWriteException;
+import org.cloud.objectstore.consensus.exceptions.LeaderElectionException;
 
 /**
  * Lock interface for leader election on top of an object storage system like S3
  */
 public interface Lock {
 
-    String LEADER_ELECTION_META_KEY = "object-storage.election.leader";
-
     /**
      * Returns the current {@link LeaderElectionRecord} or null if none.
      *
      * @return the current LeaderElectionRecord or null if none
+     * @throws LeaderElectionException if there is an error getting the record
      */
-    LeaderElectionRecord get();
+    LeaderElectionRecord get() throws LeaderElectionException;
 
     /**
      * Attempt to create a new {@link LeaderElectionRecord}.
      *
      * @param leaderElectionRecord to update
+     * @throws LeaderConflictWriteException if there is an error creating the record
      */
-    void create(LeaderElectionRecord leaderElectionRecord);
+    void create(LeaderElectionRecord leaderElectionRecord) throws LeaderConflictWriteException;
 
     /**
      * Attempts to update the current {@link LeaderElectionRecord}.
      *
+     * @param oldEtag              E-tag of the current record
      * @param leaderElectionRecord to update
+     * @throws LeaderConflictWriteException if there is an error updating the record
      */
-    void update(LeaderElectionRecord leaderElectionRecord);
+    void update(String oldEtag, LeaderElectionRecord leaderElectionRecord) throws LeaderConflictWriteException;
 
     /**
      * Returns the unique id of the lock holder.
