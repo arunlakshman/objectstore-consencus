@@ -10,9 +10,11 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionRecord.metadataFromRecord;
 import static org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionRecord.recordFromMetadata;
@@ -27,14 +29,16 @@ public class S3Lock implements Lock {
     private final String holderIdentity;
 
     @Override
-    public LeaderElectionRecord get() throws LeaderElectionException {
+    public Optional<LeaderElectionRecord> get() throws LeaderElectionException {
         try {
-
             HeadObjectResponse headObjectResponse = s3Client.headObject(request -> request.bucket(bucketName)
                     .key(leaderKey)
                     .build());
             Map<String, String> metadata = headObjectResponse.metadata();
-            return recordFromMetadata(metadata, headObjectResponse.eTag());
+            return Optional.of(recordFromMetadata(metadata, headObjectResponse.eTag()));
+        } catch (NoSuchKeyException e) {
+            log.warn("No leader election record found", e);
+            return Optional.empty();
         } catch (Exception e) {
             throw new LeaderElectionException("Error getting leader election record", e);
         }
@@ -43,18 +47,16 @@ public class S3Lock implements Lock {
     @Override
     public void create(LeaderElectionRecord leaderElectionRecord) throws LeaderConflictWriteException {
         try {
-            // S3 PutObject empty file
             s3Client.putObject(request -> request.bucket(bucketName)
                     .key(leaderKey)
-                    // If none match * then create
                     .ifNoneMatch("*")
                     .metadata(metadataFromRecord(leaderElectionRecord))
                     .build(), RequestBody.empty());
         } catch (S3Exception e) {
             // handle 412 PreconditionFailed, someone else updated the record
             if (e.statusCode() == 412) {
-                log.error("Error updating leader election record: {}", e.getMessage());
-                throw new LeaderConflictWriteException("Error updating leader election record", e);
+                log.error("Error creating leader election record: {}", e.getMessage());
+                throw new LeaderConflictWriteException("Error creating leader election record", e);
             }
             throw e;
         }

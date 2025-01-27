@@ -4,18 +4,20 @@ import org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionRecor
 import org.cloud.objectstore.consensus.exceptions.LeaderConflictWriteException;
 import org.cloud.objectstore.consensus.exceptions.LeaderElectionException;
 
+import java.util.Optional;
+
 /**
  * Lock interface for leader election on top of an object storage system like S3
  */
 public interface Lock {
 
     /**
-     * Returns the current {@link LeaderElectionRecord} or null if none.
+     * Returns the current {@link LeaderElectionRecord} or empty if none.
      *
      * @return the current LeaderElectionRecord or null if none
      * @throws LeaderElectionException if there is an error getting the record
      */
-    LeaderElectionRecord get() throws LeaderElectionException;
+    Optional<LeaderElectionRecord> get() throws LeaderElectionException;
 
     /**
      * Attempt to create a new {@link LeaderElectionRecord}.

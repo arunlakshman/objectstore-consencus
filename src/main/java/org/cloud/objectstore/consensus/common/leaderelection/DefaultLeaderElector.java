@@ -9,6 +9,7 @@ import org.cloud.objectstore.consensus.exceptions.LeaderConflictWriteException;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -51,7 +52,6 @@ public class DefaultLeaderElector implements LeaderElector {
 
         CompletableFuture<Void> leaderElectionProcess = new CompletableFuture<>();
         CompletableFuture<Void> acquireLeaseFuture = acquire();
-
         // Once the lease is acquired, then we can start the lease renewal process
         acquireLeaseFuture.whenComplete((v, t) -> {
             if (t == null) {
@@ -204,9 +204,9 @@ public class DefaultLeaderElector implements LeaderElector {
         }
 
         try {
-            LeaderElectionRecord oldRecord = lock.get();
+            Optional<LeaderElectionRecord> oldRecord = lock.get();
 
-            if (oldRecord == null) {
+            if (oldRecord.isEmpty()) {
                 // No current leader - try to become leader by creating initial object
                 LeaderElectionRecord newRecord = new LeaderElectionRecord(
                         lock.identity(),
@@ -218,14 +218,13 @@ public class DefaultLeaderElector implements LeaderElector {
 
                 lock.create(newRecord);
                 updateObserved(newRecord);
-                return true;
             } else {
-                updateObserved(oldRecord);
-                boolean isLeader = isLeader(oldRecord);
+                updateObserved(oldRecord.get());
+                boolean isLeader = isLeader(oldRecord.get());
 
-                if (!isLeader && !canBecomeLeader(oldRecord)) {
+                if (!isLeader && !canBecomeLeader(oldRecord.get())) {
                     log.info("Lock is held by {} and has not yet expired",
-                            oldRecord.getHolderIdentity());
+                            oldRecord.get().getHolderIdentity());
                     return false;
                 }
 
@@ -233,15 +232,15 @@ public class DefaultLeaderElector implements LeaderElector {
                 LeaderElectionRecord newRecord = new LeaderElectionRecord(
                         lock.identity(),
                         leaderElectionConfig.getLeaseDuration(),
-                        isLeader ? oldRecord.getAcquireTime() : now(),
+                        isLeader ? oldRecord.get().getAcquireTime() : now(),
                         now(),
-                        oldRecord.getLeaderTransitions() + (isLeader ? 0 : 1),
+                        oldRecord.get().getLeaderTransitions() + (isLeader ? 0 : 1),
                         "");
 
-                lock.update(oldRecord.getEtag(), newRecord);
+                lock.update(oldRecord.get().getEtag(), newRecord);
                 updateObserved(newRecord);
-                return true;
             }
+            return true;
 
         } catch (LeaderConflictWriteException e) {
             // Another leader has been elected
@@ -251,8 +250,8 @@ public class DefaultLeaderElector implements LeaderElector {
     }
 
     public synchronized boolean release() {
-        LeaderElectionRecord current = lock.get();
-        if (current == null || !isLeader(current)) {
+        Optional<LeaderElectionRecord> current = lock.get();
+        if (current.isEmpty() || !isLeader(current.get())) {
             return false;
         }
 
@@ -262,10 +261,10 @@ public class DefaultLeaderElector implements LeaderElector {
                 Duration.ofSeconds(1),
                 now,
                 now,
-                current.getLeaderTransitions(),
+                current.get().getLeaderTransitions(),
                 "");
 
-        lock.update(current.getEtag(), newRecord);
+        lock.update(current.get().getEtag(), newRecord);
         updateObserved(newRecord);
         return true;
     }
