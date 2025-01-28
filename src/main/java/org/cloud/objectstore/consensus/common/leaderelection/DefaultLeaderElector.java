@@ -40,6 +40,28 @@ public class DefaultLeaderElector implements LeaderElector {
         this.executor = executor;
     }
 
+    protected static ZonedDateTime now() {
+        return ZonedDateTime.now(ZoneOffset.UTC);
+    }
+
+    protected static Duration jitter(Duration duration, double maxFactor) {
+        maxFactor = maxFactor > 0 ? maxFactor : 1.0;
+        return duration.plusMillis(Double.valueOf(duration.toMillis() *
+                Math.random() * maxFactor).longValue());
+    }
+
+    protected static CompletableFuture<Void> loop(
+            Consumer<CompletableFuture<?>> consumer,
+            LongSupplier delaySupplier,
+            Executor executor) {
+        CompletableFuture<Void> completion = new CompletableFuture<>();
+        scheduleWithVariableRate(completion, executor,
+                () -> consumer.accept(completion), 0,
+                delaySupplier,
+                TimeUnit.MILLISECONDS);
+        return completion;
+    }
+
     @Override
     public CompletableFuture<Void> start() {
         // Ensure that the leader election process is only started once
@@ -174,28 +196,6 @@ public class DefaultLeaderElector implements LeaderElector {
                 leaderElectionConfig.getLeaderCallbacks().onStartLeading();
             }
         }
-    }
-
-    protected static ZonedDateTime now() {
-        return ZonedDateTime.now(ZoneOffset.UTC);
-    }
-
-    protected static Duration jitter(Duration duration, double maxFactor) {
-        maxFactor = maxFactor > 0 ? maxFactor : 1.0;
-        return duration.plusMillis(Double.valueOf(duration.toMillis() *
-                Math.random() * maxFactor).longValue());
-    }
-
-    protected static CompletableFuture<Void> loop(
-            Consumer<CompletableFuture<?>> consumer,
-            LongSupplier delaySupplier,
-            Executor executor) {
-        CompletableFuture<Void> completion = new CompletableFuture<>();
-        scheduleWithVariableRate(completion, executor,
-                () -> consumer.accept(completion), 0,
-                delaySupplier,
-                TimeUnit.MILLISECONDS);
-        return completion;
     }
 
     synchronized boolean tryAcquireOrRenew() {

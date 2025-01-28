@@ -31,15 +31,18 @@ public class S3Lock implements Lock {
     @Override
     public Optional<LeaderElectionRecord> get() throws LeaderElectionException {
         try {
+            log.info("Getting leader election record from bucket: {}, key: {}", bucketName, leaderKey);
             HeadObjectResponse headObjectResponse = s3Client.headObject(request -> request.bucket(bucketName)
                     .key(leaderKey)
                     .build());
             Map<String, String> metadata = headObjectResponse.metadata();
+            log.info("Leader election record metadata: {}", metadata);
             return Optional.of(recordFromMetadata(metadata, headObjectResponse.eTag()));
         } catch (NoSuchKeyException e) {
             log.warn("No leader election record found", e);
             return Optional.empty();
         } catch (Exception e) {
+            log.error("Error getting leader election record", e);
             throw new LeaderElectionException("Error getting leader election record", e);
         }
     }
@@ -47,17 +50,19 @@ public class S3Lock implements Lock {
     @Override
     public void create(LeaderElectionRecord leaderElectionRecord) throws LeaderConflictWriteException {
         try {
+            log.info("Creating leader election record in bucket: {}, key: {}", bucketName, leaderKey);
             s3Client.putObject(request -> request.bucket(bucketName)
                     .key(leaderKey)
                     .ifNoneMatch("*")
                     .metadata(metadataFromRecord(leaderElectionRecord))
                     .build(), RequestBody.empty());
+            log.info("Leader election record created successfully");
         } catch (S3Exception e) {
-            // handle 412 PreconditionFailed, someone else updated the record
             if (e.statusCode() == 412) {
                 log.error("Error creating leader election record: {}", e.getMessage());
                 throw new LeaderConflictWriteException("Error creating leader election record", e);
             }
+            log.error("S3Exception while creating leader election record", e);
             throw e;
         }
     }
@@ -65,7 +70,7 @@ public class S3Lock implements Lock {
     @Override
     public void update(String oldEtag, LeaderElectionRecord leaderElectionRecord) throws LeaderConflictWriteException {
         try {
-            // Use copy operation to update metadata while preserving the object
+            log.info("Updating leader election record in bucket: {}, key: {}", bucketName, leaderKey);
             s3Client.copyObject(request -> request
                     .sourceBucket(bucketName)
                     .sourceKey(leaderKey)
@@ -75,24 +80,27 @@ public class S3Lock implements Lock {
                     .metadataDirective(MetadataDirective.REPLACE)
                     .copySourceIfMatch(oldEtag)
                     .build());
-
+            log.info("Leader election record updated successfully");
         } catch (S3Exception e) {
-            // handle 412 PreconditionFailed, someone else updated the record
             if (e.statusCode() == 412) {
                 log.error("Error updating leader election record: {}", e.getMessage());
                 throw new LeaderConflictWriteException("Error updating leader election record", e);
             }
+            log.error("S3Exception while updating leader election record", e);
             throw e;
         }
     }
 
     @Override
     public String identity() {
+        log.info("Returning holder identity: {}", holderIdentity);
         return holderIdentity;
     }
 
     @Override
     public String describe() {
-        return String.format("Lock: %s :: %s (%s)", bucketName, leaderKey, holderIdentity);
+        String description = String.format("Lock: %s :: %s (%s)", bucketName, leaderKey, holderIdentity);
+        log.info("Lock description: {}", description);
+        return description;
     }
 }

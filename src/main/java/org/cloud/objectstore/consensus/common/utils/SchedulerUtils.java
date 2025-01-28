@@ -10,8 +10,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-public final class SchedulerUtils {
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
+public final class SchedulerUtils {
 
     private static final CachedSingleThreadScheduler SHARED_SCHEDULER = new CachedSingleThreadScheduler();
 
@@ -29,12 +31,20 @@ public final class SchedulerUtils {
     public static void scheduleWithVariableRate(CompletableFuture<?> completion, Executor executor, Runnable command,
                                                 long initialDelay,
                                                 LongSupplier nextDelay, TimeUnit unit) {
+        log.info("Scheduling task with initial delay: {} {}, and variable rate", initialDelay, unit);
         AtomicReference<ScheduledFuture<?>> currentScheduledFuture = new AtomicReference<>();
         AtomicLong next = new AtomicLong(unit.convert(System.nanoTime(), TimeUnit.NANOSECONDS) + Math.max(0, initialDelay));
         schedule(() -> CompletableFuture.runAsync(command, executor), initialDelay, unit, completion, nextDelay, next,
                 currentScheduledFuture);
         // remove on cancel is true, so this may proactively clean up
-        completion.whenComplete((v, t) -> Optional.ofNullable(currentScheduledFuture.get()).ifPresent(s -> s.cancel(true)));
+        completion.whenComplete((v, t) -> {
+            if (t != null) {
+                log.error("Task completed exceptionally", t);
+            } else {
+                log.info("Task completed successfully");
+            }
+            Optional.ofNullable(currentScheduledFuture.get()).ifPresent(s -> s.cancel(true));
+        });
     }
 
     /**
@@ -51,15 +61,19 @@ public final class SchedulerUtils {
     private static void schedule(Supplier<CompletableFuture<?>> runner, long delay, TimeUnit unit,
                                  CompletableFuture<?> completion, LongSupplier nextDelay, AtomicLong next,
                                  AtomicReference<ScheduledFuture<?>> currentScheduledFuture) {
+        log.info("Scheduling next task with delay: {} {}", delay, unit);
         currentScheduledFuture.set(SHARED_SCHEDULER.schedule(() -> {
             if (completion.isDone()) {
+                log.info("Completion is already done, cancelling further scheduling");
                 return;
             }
             CompletableFuture<?> runAsync = runner.get();
             runAsync.whenComplete((v, t) -> {
                 if (t != null) {
+                    log.error("Task execution resulted in an exception", t);
                     completion.completeExceptionally(t);
                 } else if (!completion.isDone()) {
+                    log.info("Task executed successfully, scheduling next execution");
                     schedule(runner, next.addAndGet(nextDelay.getAsLong()) - unit.convert(System.nanoTime(), TimeUnit.NANOSECONDS),
                             unit, completion, nextDelay, next, currentScheduledFuture);
                 }

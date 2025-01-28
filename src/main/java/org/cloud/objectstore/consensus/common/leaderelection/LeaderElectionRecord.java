@@ -50,25 +50,6 @@ public class LeaderElectionRecord {
         this.etag = etag;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
-        LeaderElectionRecord that = (LeaderElectionRecord) o;
-        return leaderTransitions == that.leaderTransitions &&
-                Objects.equals(holderIdentity, that.holderIdentity) &&
-                Objects.equals(leaseDuration, that.leaseDuration) &&
-                Objects.equals(acquireTime, that.acquireTime) &&
-                Objects.equals(renewTime, that.renewTime);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(holderIdentity, leaseDuration, acquireTime, renewTime, leaderTransitions);
-    }
-
     public static Map<String, String> metadataFromRecord(LeaderElectionRecord record) {
         return Map.of(
                 META_HOLDER_IDENTITY, record.getHolderIdentity(),
@@ -87,6 +68,25 @@ public class LeaderElectionRecord {
                 ZonedDateTime.parse(metadata.get(META_RENEW_TIME)),
                 Integer.parseInt(metadata.get(META_LEADER_TRANSITIONS)),
                 etag);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        LeaderElectionRecord that = (LeaderElectionRecord) o;
+        return leaderTransitions == that.leaderTransitions &&
+                Objects.equals(holderIdentity, that.holderIdentity) &&
+                Objects.equals(leaseDuration, that.leaseDuration) &&
+                Objects.equals(acquireTime, that.acquireTime) &&
+                Objects.equals(renewTime, that.renewTime);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(holderIdentity, leaseDuration, acquireTime, renewTime, leaderTransitions);
     }
 
 }

@@ -1,8 +1,11 @@
 package org.cloud.objectstore.consensus.api;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Objects;
 import java.util.function.Consumer;
 
+@Slf4j
 public class LeaderCallbacks {
 
     private final Runnable onStartLeading;
@@ -16,14 +19,17 @@ public class LeaderCallbacks {
     }
 
     public void onStartLeading() {
+        log.info("Starting to lead");
         onStartLeading.run();
     }
 
     public void onStopLeading() {
+        log.info("Stopping leading");
         onStopLeading.run();
     }
 
     public void onNewLeader(String id) {
+        log.info("New leader elected: {}", id);
         onNewLeader.accept(id);
     }
 }

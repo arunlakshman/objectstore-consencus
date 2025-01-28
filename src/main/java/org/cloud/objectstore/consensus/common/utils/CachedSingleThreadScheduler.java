@@ -1,6 +1,12 @@
 package org.cloud.objectstore.consensus.common.utils;
 
-import java.util.concurrent.*;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Maintains a single thread daemon scheduler, which will terminate the thread
@@ -13,6 +19,7 @@ import java.util.concurrent.*;
  * <br>
  * This is very similar to the CompletableFuture.Delayer, but provides a scheduler method
  */
+@Slf4j
 public class CachedSingleThreadScheduler {
 
     /**
@@ -35,6 +42,7 @@ public class CachedSingleThreadScheduler {
      */
     public CachedSingleThreadScheduler() {
         this(DEFAULT_TTL_MILLIS);
+        log.info("CachedSingleThreadScheduler created with default TTL: {} ms", DEFAULT_TTL_MILLIS);
     }
 
     /**
@@ -44,71 +52,7 @@ public class CachedSingleThreadScheduler {
      */
     public CachedSingleThreadScheduler(long ttlMillis) {
         this.ttlMillis = ttlMillis;
-    }
-
-    /**
-     * Schedules a command to be run periodically with a fixed delay between
-     * the end of one execution and the start of the next.
-     *
-     * @param command      the task to execute
-     * @param initialDelay the time to delay first execution
-     * @param delay        the delay between the termination of one execution and the commencement of the next
-     * @param unit         the time unit of the initialDelay and delay parameters
-     * @return a ScheduledFuture representing pending completion of the task
-     */
-    public synchronized ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
-                                                                  long initialDelay,
-                                                                  long delay,
-                                                                  TimeUnit unit) {
-        startExecutor();
-        return executor.scheduleWithFixedDelay(command, initialDelay, delay, unit);
-    }
-
-    /**
-     * Schedules a command to be executed after the given delay.
-     *
-     * @param command the task to execute
-     * @param delay   the time from now to delay execution
-     * @param unit    the time unit of the delay parameter
-     * @return a ScheduledFuture representing pending completion of the task
-     */
-    public synchronized ScheduledFuture<?> schedule(Runnable command,
-                                                    long delay,
-                                                    TimeUnit unit) {
-        startExecutor();
-        return executor.schedule(command, delay, unit);
-    }
-
-    /**
-     * Starts the executor if it is not already started and schedules a task
-     * to check for shutdown.
-     */
-    private void startExecutor() {
-        if (executor == null) {
-            // start the executor and add a ttl task
-            executor = new ScheduledThreadPoolExecutor(1, daemonThreadFactory(this));
-            executor.setRemoveOnCancelPolicy(true);
-            executor.scheduleWithFixedDelay(this::shutdownCheck, ttlMillis, ttlMillis, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    /**
-     * Checks if the executor should be shut down and shuts it down if the queue is empty.
-     */
-    private synchronized void shutdownCheck() {
-        if (executor.getQueue().isEmpty()) {
-            executor.shutdownNow();
-            executor = null;
-        }
-    }
-
-    /**
-     * Checks if the executor is currently running.
-     *
-     * @return true if the executor is running, false otherwise
-     */
-    synchronized boolean hasExecutor() {
-        return executor != null;
+        log.info("CachedSingleThreadScheduler created with TTL: {} ms", ttlMillis);
     }
 
     /**
@@ -120,6 +64,7 @@ public class CachedSingleThreadScheduler {
      */
     static ThreadFactory daemonThreadFactory(Object forObject) {
         String name = forObject.getClass().getSimpleName() + "-" + System.identityHashCode(forObject);
+        log.info("Creating daemon thread factory with name: {}", name);
         return daemonThreadFactory(name);
     }
 
@@ -138,9 +83,79 @@ public class CachedSingleThreadScheduler {
                 Thread ret = threadFactory.newThread(r);
                 ret.setName(name + "-" + ret.getName());
                 ret.setDaemon(true);
+                log.info("Created new daemon thread: {}", ret.getName());
                 return ret;
             }
         };
     }
 
+    /**
+     * Schedules a command to be run periodically with a fixed delay between
+     * the end of one execution and the start of the next.
+     *
+     * @param command      the task to execute
+     * @param initialDelay the time to delay first execution
+     * @param delay        the delay between the termination of one execution and the commencement of the next
+     * @param unit         the time unit of the initialDelay and delay parameters
+     * @return a ScheduledFuture representing pending completion of the task
+     */
+    public synchronized ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
+                                                                  long initialDelay,
+                                                                  long delay,
+                                                                  TimeUnit unit) {
+        log.info("Scheduling task with fixed delay: initialDelay={} {}, delay={} {}", initialDelay, unit, delay, unit);
+        startExecutor();
+        return executor.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+    }
+
+    /**
+     * Schedules a command to be executed after the given delay.
+     *
+     * @param command the task to execute
+     * @param delay   the time from now to delay execution
+     * @param unit    the time unit of the delay parameter
+     * @return a ScheduledFuture representing pending completion of the task
+     */
+    public synchronized ScheduledFuture<?> schedule(Runnable command,
+                                                    long delay,
+                                                    TimeUnit unit) {
+        log.info("Scheduling task with delay: delay={} {}", delay, unit);
+        startExecutor();
+        return executor.schedule(command, delay, unit);
+    }
+
+    /**
+     * Starts the executor if it is not already started and schedules a task
+     * to check for shutdown.
+     */
+    private void startExecutor() {
+        if (executor == null) {
+            log.info("Starting executor");
+            executor = new ScheduledThreadPoolExecutor(1, daemonThreadFactory(this));
+            executor.setRemoveOnCancelPolicy(true);
+            executor.scheduleWithFixedDelay(this::shutdownCheck, ttlMillis, ttlMillis, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /**
+     * Checks if the executor should be shut down and shuts it down if the queue is empty.
+     */
+    private synchronized void shutdownCheck() {
+        if (executor.getQueue().isEmpty()) {
+            log.info("Shutting down executor due to empty queue");
+            executor.shutdownNow();
+            executor = null;
+        }
+    }
+
+    /**
+     * Checks if the executor is currently running.
+     *
+     * @return true if the executor is running, false otherwise
+     */
+    synchronized boolean hasExecutor() {
+        boolean hasExecutor = executor != null;
+        log.info("Checking if executor is running: {}", hasExecutor);
+        return hasExecutor;
+    }
 }
