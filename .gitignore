@@ -2,3 +2,4 @@
 .mvn/
 .vscode/
 target/
+.DS_Store

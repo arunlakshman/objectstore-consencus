@@ -1,5 +1,7 @@
 package org.cloud.objectstore.consensus.common.utils;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -9,8 +11,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class SchedulerUtils {

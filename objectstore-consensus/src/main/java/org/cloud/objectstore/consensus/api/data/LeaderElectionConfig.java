@@ -48,7 +48,7 @@ public class LeaderElectionConfig {
     private final String name;
 
     // Object Metadata
-    
+
     /**
      * The name of the bucket where the leader election metadata is stored.
      */

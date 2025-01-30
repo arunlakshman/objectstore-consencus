@@ -4,17 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.westmam.s3</groupId>
-    <artifactId>objectstore-consensus-parent</artifactId>
+    <parent>
+        <groupId>org.westmam.s3</groupId>
+        <artifactId>objectstore-consensus-parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>objectstore-consensus</artifactId>
     <version>1.0-SNAPSHOT</version>
-
-    <packaging>pom</packaging>
-
-    <modules>
-        <!-- Child modules will be listed here -->
-        <module>objectstore-consensus</module>
-        <module>examples</module>
-    </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
