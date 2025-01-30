@@ -21,6 +21,9 @@ import java.util.function.LongSupplier;
 
 import static org.cloud.objectstore.consensus.common.utils.SchedulerUtils.scheduleWithVariableRate;
 
+/**
+ * Default implementation of the {@link LeaderElector} interface.
+ */
 @Slf4j
 public class DefaultLeaderElector implements LeaderElector {
 
@@ -38,6 +41,7 @@ public class DefaultLeaderElector implements LeaderElector {
         this.leaderElectionConfig = config;
         this.lock = lock;
         this.executor = executor;
+        log.info("DefaultLeaderElector created with config: {}, lock: {}, executor: {}", config, lock, executor);
     }
 
     protected static ZonedDateTime now() {
@@ -70,6 +74,7 @@ public class DefaultLeaderElector implements LeaderElector {
                 throw new IllegalStateException("LeaderElector may only be used once");
             }
             started = true;
+            log.info("Leader election process started");
         }
 
         CompletableFuture<Void> leaderElectionProcess = new CompletableFuture<>();
@@ -77,15 +82,14 @@ public class DefaultLeaderElector implements LeaderElector {
         // Once the lease is acquired, then we can start the lease renewal process
         acquireLeaseFuture.whenComplete((v, t) -> {
             if (t == null) {
-
-                log.info("Leader election : Acquired lease");
+                log.info("Leader election: Acquired lease");
                 // Start the lease renewal process
                 CompletableFuture<Void> leaseRenewalFuture = renewWithTimeout();
 
                 // Once the lease renewal is lost, then we can stop leading
                 // and complete the leader election process
                 leaseRenewalFuture.whenComplete((v1, t1) -> {
-                    log.info("Leader election : Lease renewal lost, will stop leading");
+                    log.info("Leader election: Lease renewal lost, will stop leading");
                     stopLeading();
                     if (t1 != null) {
                         leaderElectionProcess.completeExceptionally(t1);
@@ -111,6 +115,7 @@ public class DefaultLeaderElector implements LeaderElector {
 
     private synchronized void stopLeading() {
         stopped = true;
+        log.info("Stopping leading");
         LeaderElectionRecord current = observedRecord.get();
         if (current == null || !isLeader(current)) {
             return;
@@ -118,6 +123,7 @@ public class DefaultLeaderElector implements LeaderElector {
         if (leaderElectionConfig.isReleaseOnCancel()) {
             try {
                 if (release()) {
+                    log.info("Leadership released successfully");
                     return;
                 }
             } catch (Exception e) {
@@ -144,14 +150,18 @@ public class DefaultLeaderElector implements LeaderElector {
     }
 
     protected final boolean isLeader(LeaderElectionRecord record) {
-        return lock.identity().equals(record.getHolderIdentity());
+        boolean isLeader = lock.identity().equals(record.getHolderIdentity());
+        log.info("Checking if current identity is leader: {}", isLeader);
+        return isLeader;
     }
 
     protected final boolean canBecomeLeader(LeaderElectionRecord record) {
-        return record.getHolderIdentity() == null ||
+        boolean canBecomeLeader = record.getHolderIdentity() == null ||
                 record.getHolderIdentity().isEmpty() ||
                 now().isAfter(record.getRenewTime()
                         .plus(leaderElectionConfig.getLeaseDuration()));
+        log.info("Checking if can become leader: {}", canBecomeLeader);
+        return canBecomeLeader;
     }
 
     private CompletableFuture<Void> renewWithTimeout() {
@@ -200,6 +210,7 @@ public class DefaultLeaderElector implements LeaderElector {
 
     synchronized boolean tryAcquireOrRenew() {
         if (stopped) {
+            log.info("Stopped, will not try to acquire or renew");
             return false;
         }
 
@@ -207,6 +218,7 @@ public class DefaultLeaderElector implements LeaderElector {
             Optional<LeaderElectionRecord> oldRecord = lock.get();
 
             if (oldRecord.isEmpty()) {
+                log.info("No current leader, trying to become leader by creating initial object");
                 // No current leader - try to become leader by creating initial object
                 LeaderElectionRecord newRecord = new LeaderElectionRecord(
                         lock.identity(),
@@ -240,6 +252,7 @@ public class DefaultLeaderElector implements LeaderElector {
                 lock.update(oldRecord.get().getEtag(), newRecord);
                 updateObserved(newRecord);
             }
+            log.info("Successfully acquired or renewed leadership");
             return true;
 
         } catch (LeaderConflictWriteException e) {
@@ -252,6 +265,7 @@ public class DefaultLeaderElector implements LeaderElector {
     public synchronized boolean release() {
         Optional<LeaderElectionRecord> current = lock.get();
         if (current.isEmpty() || !isLeader(current.get())) {
+            log.info("No current leader or not the leader, nothing to release");
             return false;
         }
 
@@ -266,7 +280,7 @@ public class DefaultLeaderElector implements LeaderElector {
 
         lock.update(current.get().getEtag(), newRecord);
         updateObserved(newRecord);
+        log.info("Leadership released");
         return true;
     }
-
 }

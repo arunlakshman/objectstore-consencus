@@ -93,7 +93,7 @@ public class S3Lock implements Lock {
 
     @Override
     public String identity() {
-        log.info("Returning holder identity: {}", holderIdentity);
+        log.debug("Returning holder identity: {}", holderIdentity);
         return holderIdentity;
     }
 
