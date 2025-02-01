@@ -35,10 +35,11 @@ public class App {
         LeaderElectionConfig config = LeaderElectionConfig.builder()
                 .bucketName("allaks-output-dump")
                 .leaderKey("test-ha/leader")
-                .leaseDuration(Duration.ofSeconds(23))
+                .leaseDuration(Duration.ofSeconds(45))
                 .holderIdentity(UUID.randomUUID().toString())
-                .retryPeriod(Duration.ofSeconds(10))
-                .renewDeadline(Duration.ofSeconds(15))
+                // Make calls to s3 every 15 seconds
+                .retryPeriod(Duration.ofSeconds(15))
+                .renewDeadline(Duration.ofSeconds(45))
                 .releaseOnCancel(true)
                 .leaderCallbacks(leaderCallbacks)
                 .build();

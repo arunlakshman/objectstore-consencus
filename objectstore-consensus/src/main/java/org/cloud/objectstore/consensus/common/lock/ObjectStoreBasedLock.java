@@ -9,7 +9,7 @@ import java.util.Optional;
 /**
  * Lock interface for leader election on top of an object storage system like S3
  */
-public interface Lock {
+public interface ObjectStoreBasedLock {
 
     /**
      * Returns the current {@link LeaderElectionRecord} or empty if none.

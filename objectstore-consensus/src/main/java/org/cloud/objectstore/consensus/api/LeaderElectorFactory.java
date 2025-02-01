@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.cloud.objectstore.consensus.api.data.LeaderElectionConfig;
 import org.cloud.objectstore.consensus.api.data.ObjectStore;
 import org.cloud.objectstore.consensus.common.leaderelection.DefaultLeaderElector;
-import org.cloud.objectstore.consensus.common.lock.Lock;
+import org.cloud.objectstore.consensus.common.lock.ObjectStoreBasedLock;
 import org.cloud.objectstore.consensus.s3.lock.S3Lock;
 import software.amazon.awssdk.services.s3.S3Client;
 
@@ -32,7 +32,7 @@ public class LeaderElectorFactory {
         log.info("Creating LeaderElector with config: {}, objectStore: {}, objectStoreClient: {}",
                 config, objectStore, objectStoreClient);
 
-        final Lock lock;
+        final ObjectStoreBasedLock lock;
         switch (objectStore) {
             case S3:
                 if (objectStoreClient instanceof S3Client) {

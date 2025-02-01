@@ -23,12 +23,22 @@ public class LeaderElectionConfig {
     private final Duration leaseDuration;
 
     /**
-     * The interval between attempts by the acting master to renew a leadership slot.
+     * The deadline by which the leader must renew its lease.
+     * <p>
+     * Example : If the leaseDuration is 30 seconds and the renewDeadline is 25 seconds,
+     * The lease renewal should be attempted every 25 seconds, essentially giving a 5 second buffer.
+     * </p>
+     *
+     * <b>This should be less always than the lease duration.</b>
      */
     private final Duration renewDeadline;
 
     /**
-     * The duration the clients should wait between retries of the leader election.
+     * The interval between attempts to check for leadership. i.e. the time between calls made to the object store.
+     * <p>
+     * Example : If the retryPeriod is 30 seconds,
+     * The leader election process will be attempted every 30 seconds.
+     * </p>
      */
     private final Duration retryPeriod;
 

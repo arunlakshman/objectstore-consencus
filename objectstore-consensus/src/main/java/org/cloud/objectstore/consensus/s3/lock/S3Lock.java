@@ -3,7 +3,7 @@ package org.cloud.objectstore.consensus.s3.lock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cloud.objectstore.consensus.common.leaderelection.LeaderElectionRecord;
-import org.cloud.objectstore.consensus.common.lock.Lock;
+import org.cloud.objectstore.consensus.common.lock.ObjectStoreBasedLock;
 import org.cloud.objectstore.consensus.exceptions.LeaderConflictWriteException;
 import org.cloud.objectstore.consensus.exceptions.LeaderElectionException;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -21,7 +21,7 @@ import static org.cloud.objectstore.consensus.common.leaderelection.LeaderElecti
 
 @Slf4j
 @RequiredArgsConstructor
-public class S3Lock implements Lock {
+public class S3Lock implements ObjectStoreBasedLock {
 
     private final S3Client s3Client;
     private final String bucketName;

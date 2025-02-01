@@ -3,7 +3,7 @@ package org.cloud.objectstore.consensus.common.leaderelection;
 import lombok.extern.slf4j.Slf4j;
 import org.cloud.objectstore.consensus.api.LeaderElector;
 import org.cloud.objectstore.consensus.api.data.LeaderElectionConfig;
-import org.cloud.objectstore.consensus.common.lock.Lock;
+import org.cloud.objectstore.consensus.common.lock.ObjectStoreBasedLock;
 import org.cloud.objectstore.consensus.exceptions.LeaderConflictWriteException;
 
 import java.time.Duration;
@@ -29,14 +29,20 @@ public class DefaultLeaderElector implements LeaderElector {
 
     protected static final Double JITTER_FACTOR = 1.2;
     private final LeaderElectionConfig leaderElectionConfig;
-    private final Lock lock;
+    /**
+     * The object store based lock used for leader election.
+     */
+    private final ObjectStoreBasedLock lock;
+    /**
+     * In memory view of the latest leadership record.
+     */
     private final AtomicReference<LeaderElectionRecord> observedRecord = new AtomicReference<>();
     private final Executor executor;
     private boolean started;
     private boolean stopped;
 
     public DefaultLeaderElector(LeaderElectionConfig config,
-                                Lock lock,
+                                ObjectStoreBasedLock lock,
                                 Executor executor) {
         this.leaderElectionConfig = config;
         this.lock = lock;
@@ -134,17 +140,17 @@ public class DefaultLeaderElector implements LeaderElector {
     }
 
     private CompletableFuture<Void> acquire() {
-        log.debug("Attempting to acquire leader lease...");
+        log.info("Attempting to acquire leader lease...");
         return loop(completion -> {
             try {
                 if (tryAcquireOrRenew()) {
                     completion.complete(null);
-                    log.debug("Acquired lease");
+                    log.info("Acquired lease");
                 } else {
-                    log.debug("Failed to acquire lease, retrying...");
+                    log.info("Failed to acquire lease, retrying...");
                 }
             } catch (Exception e) {
-                log.warn("Exception while acquiring lock, retrying...", e);
+                log.error("Exception while acquiring lock, retrying...", e);
             }
         }, () -> jitter(leaderElectionConfig.getRetryPeriod(), JITTER_FACTOR).toMillis(), executor);
     }
@@ -164,14 +170,20 @@ public class DefaultLeaderElector implements LeaderElector {
         return canBecomeLeader;
     }
 
+    /**
+     * Attempts to renew the leadership lease.
+     *
+     * @return a future that completes when the lease is lost
+     */
     private CompletableFuture<Void> renewWithTimeout() {
-        log.debug("Attempting to renew leader lease...");
+        log.info("Attempting to renew leader lease...");
         AtomicLong renewBy = new AtomicLong(System.currentTimeMillis() +
                 leaderElectionConfig.getRenewDeadline().toMillis());
 
         return loop(completion -> {
+            // If the renewal deadline has been reached, then we should stop leading
             if (System.currentTimeMillis() > renewBy.get()) {
-                log.debug("Renew deadline reached");
+                log.info("Renew deadline reached");
                 completion.complete(null);
                 return;
             }
@@ -188,6 +200,11 @@ public class DefaultLeaderElector implements LeaderElector {
         }, () -> leaderElectionConfig.getRetryPeriod().toMillis(), executor);
     }
 
+    /**
+     * Updates the in memory view of the leadership record and notifies the callbacks if the leader has changed.
+     *
+     * @param record the new leadership record
+     */
     private void updateObserved(LeaderElectionRecord record) {
         LeaderElectionRecord current = observedRecord.getAndSet(record);
         if (record != current &&
@@ -197,7 +214,7 @@ public class DefaultLeaderElector implements LeaderElector {
             String currentLeader = current != null ? current.getHolderIdentity() : null;
             String newLeader = record.getHolderIdentity();
 
-            log.debug("Leader changed from {} to {}", currentLeader, newLeader);
+            log.info("Leader changed from {} to {}", currentLeader, newLeader);
             leaderElectionConfig.getLeaderCallbacks().onNewLeader(newLeader);
 
             if (lock.identity().equals(currentLeader)) {
@@ -208,6 +225,11 @@ public class DefaultLeaderElector implements LeaderElector {
         }
     }
 
+    /**
+     * Tries to acquire or renew the leadership.
+     *
+     * @return true if leadership was acquired or renewed, false otherwise
+     */
     synchronized boolean tryAcquireOrRenew() {
         if (stopped) {
             log.info("Stopped, will not try to acquire or renew");
