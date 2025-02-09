@@ -1,4 +1,4 @@
-package org.cloud.objectstore.consensus.api;
+package org.cloud.objectstore.consensus.api.leaderelection;
 
 import java.util.concurrent.CompletableFuture;
 

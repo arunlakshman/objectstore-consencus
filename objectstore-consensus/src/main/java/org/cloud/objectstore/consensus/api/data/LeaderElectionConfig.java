@@ -4,7 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import org.cloud.objectstore.consensus.api.LeaderCallbacks;
+import org.cloud.objectstore.consensus.api.leaderelection.LeaderCallbacks;
 
 import java.time.Duration;
 

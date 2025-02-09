@@ -1,7 +1,7 @@
 package org.cloud.objectstore.consensus.common.leaderelection;
 
 import lombok.extern.slf4j.Slf4j;
-import org.cloud.objectstore.consensus.api.LeaderElector;
+import org.cloud.objectstore.consensus.api.leaderelection.LeaderElector;
 import org.cloud.objectstore.consensus.api.data.LeaderElectionConfig;
 import org.cloud.objectstore.consensus.common.lock.ObjectStoreBasedLock;
 import org.cloud.objectstore.consensus.exceptions.LeaderConflictWriteException;

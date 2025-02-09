@@ -1,4 +1,4 @@
-package org.cloud.objectstore.consensus.api;
+package org.cloud.objectstore.consensus.api.leaderelection;
 
 import lombok.extern.slf4j.Slf4j;
 import org.cloud.objectstore.consensus.api.data.LeaderElectionConfig;

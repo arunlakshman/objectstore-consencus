@@ -39,7 +39,7 @@ public class S3Lock implements ObjectStoreBasedLock {
             log.info("Leader election record metadata: {}", metadata);
             return Optional.of(recordFromMetadata(metadata, headObjectResponse.eTag()));
         } catch (NoSuchKeyException e) {
-            log.warn("No leader election record found", e);
+            log.warn("No leader election record found : {}", e.getMessage());
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error getting leader election record", e);
