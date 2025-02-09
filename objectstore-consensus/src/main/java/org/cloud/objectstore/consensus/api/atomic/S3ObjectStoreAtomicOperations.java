@@ -41,6 +41,8 @@ public class S3ObjectStoreAtomicOperations implements ObjectStoreAtomicOperation
             if (e.statusCode() == 412) {
                 log.warn("Precondition failed for update operation");
                 return false;
+            } else {
+                throw new RuntimeException(e);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -48,7 +50,7 @@ public class S3ObjectStoreAtomicOperations implements ObjectStoreAtomicOperation
         return true;
     }
 
-    private ObjectState getObjectState() throws IOException {
+    ObjectState getObjectState() throws IOException {
         GetObjectRequest.Builder requestBuilder = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(keyName);
