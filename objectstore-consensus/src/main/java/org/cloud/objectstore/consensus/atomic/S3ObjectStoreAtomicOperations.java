@@ -1,7 +1,8 @@
-package org.cloud.objectstore.consensus.api.atomic;
+package org.cloud.objectstore.consensus.atomic;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cloud.objectstore.consensus.api.atomic.ObjectStoreAtomicOperations;
 import org.cloud.objectstore.consensus.api.data.ObjectState;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;

@@ -1,4 +1,4 @@
-package org.cloud.objectstore.consensus.api.atomic;
+package org.cloud.objectstore.consensus.atomic;
 
 import org.cloud.objectstore.consensus.api.data.ObjectState;
 import org.junit.jupiter.api.Assertions;
